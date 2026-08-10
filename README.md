@@ -4,7 +4,7 @@ A browser-based 2D space shooter built with HTML5 Canvas. No external images req
 
 ## Play
 
-**Controls:** Arrow keys to move, Space to shoot.
+**Controls:** Arrow keys to move, Space to shoot. On mobile, use on-screen buttons or drag the ship; tap FIRE to shoot.
 
 ## Run Locally
 

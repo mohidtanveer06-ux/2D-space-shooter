@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="mobile-web-app-capable" content="yes">
   <title>2D Space Shooter</title>
   <style>
     * {
@@ -13,6 +14,7 @@
 
     body {
       min-height: 100vh;
+      min-height: 100dvh;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -20,6 +22,11 @@
       background: #050510;
       font-family: 'Courier New', Courier, monospace;
       color: #fff;
+      overflow: hidden;
+      touch-action: manipulation;
+      -webkit-user-select: none;
+      user-select: none;
+      padding: 0.5rem;
     }
 
     h1 {
@@ -31,7 +38,8 @@
     }
 
     #hud {
-      width: 800px;
+      width: 100%;
+      max-width: 800px;
       display: flex;
       justify-content: space-between;
       padding: 0.5rem 0;
@@ -48,12 +56,18 @@
 
     #gameContainer {
       position: relative;
+      width: 100%;
+      max-width: 800px;
     }
 
     canvas {
       display: block;
+      width: 100%;
+      height: auto;
+      aspect-ratio: 4 / 3;
       border: 2px solid #333;
       box-shadow: 0 0 20px rgba(0, 255, 255, 0.2);
+      touch-action: none;
     }
 
     #gameOver {
@@ -107,6 +121,85 @@
       margin-top: 0.75rem;
       font-size: 0.85rem;
       color: #888;
+      text-align: center;
+      padding: 0 0.5rem;
+    }
+
+    #touchControls {
+      display: none;
+      width: 100%;
+      max-width: 800px;
+      margin-top: 0.75rem;
+      gap: 0.75rem;
+      align-items: stretch;
+    }
+
+    #touchControls.visible {
+      display: flex;
+    }
+
+    .control-group {
+      display: flex;
+      gap: 0.5rem;
+      flex: 1;
+    }
+
+    .control-btn {
+      flex: 1;
+      min-height: 64px;
+      font-family: inherit;
+      font-size: 1.4rem;
+      font-weight: bold;
+      color: #fff;
+      background: rgba(0, 255, 255, 0.15);
+      border: 2px solid #0ff;
+      border-radius: 12px;
+      cursor: pointer;
+      touch-action: none;
+      -webkit-tap-highlight-color: transparent;
+      transition: background 0.1s, transform 0.1s;
+    }
+
+    .control-btn:active,
+    .control-btn.active {
+      background: rgba(0, 255, 255, 0.4);
+      transform: scale(0.96);
+    }
+
+    #btnShoot {
+      flex: 1.2;
+      background: rgba(255, 68, 68, 0.2);
+      border-color: #f44;
+      font-size: 1.1rem;
+      letter-spacing: 0.05em;
+    }
+
+    #btnShoot:active,
+    #btnShoot.active {
+      background: rgba(255, 68, 68, 0.5);
+    }
+
+    @media (max-width: 600px) {
+      h1 {
+        font-size: 1.1rem;
+        margin-bottom: 0.25rem;
+      }
+
+      #hud {
+        font-size: 0.95rem;
+      }
+
+      #gameOver h2 {
+        font-size: 1.8rem;
+      }
+
+      #instructions {
+        font-size: 0.75rem;
+      }
+
+      .control-btn {
+        min-height: 56px;
+      }
     }
   </style>
 </head>
@@ -124,6 +217,13 @@
       <button id="restartBtn">RESTART</button>
     </div>
   </div>
+  <div id="touchControls">
+    <div class="control-group">
+      <button type="button" class="control-btn" id="btnLeft" aria-label="Move left">◀</button>
+      <button type="button" class="control-btn" id="btnRight" aria-label="Move right">▶</button>
+    </div>
+    <button type="button" class="control-btn" id="btnShoot" aria-label="Shoot">FIRE</button>
+  </div>
   <p id="instructions">Arrow Keys: Move &nbsp;|&nbsp; Space: Shoot</p>
 
   <script>
@@ -134,6 +234,13 @@
     const gameOverEl = document.getElementById('gameOver');
     const finalScoreEl = document.getElementById('finalScore');
     const restartBtn = document.getElementById('restartBtn');
+    const touchControlsEl = document.getElementById('touchControls');
+    const instructionsEl = document.getElementById('instructions');
+    const btnLeft = document.getElementById('btnLeft');
+    const btnRight = document.getElementById('btnRight');
+    const btnShoot = document.getElementById('btnShoot');
+
+    const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 
     const CANVAS_W = 800;
     const CANVAS_H = 600;
@@ -152,6 +259,7 @@
     let particles = [];
     let stars = [];
     let keys = {};
+    let touchInput = { left: false, right: false, shoot: false };
     let lastShot = 0;
     let lastSpawn = 0;
     let animationId = null;
@@ -248,13 +356,13 @@
     function update(timestamp) {
       if (state !== 'playing') return;
 
-      if (keys['ArrowLeft']) {
+      if (keys['ArrowLeft'] || touchInput.left) {
         player.x = Math.max(0, player.x - player.speed);
       }
-      if (keys['ArrowRight']) {
+      if (keys['ArrowRight'] || touchInput.right) {
         player.x = Math.min(CANVAS_W - player.width, player.x + player.speed);
       }
-      if (keys[' ']) {
+      if (keys[' '] || touchInput.shoot) {
         shoot();
       }
 
@@ -421,9 +529,80 @@
       updateHUD();
     }
 
+    function bindTouchButton(btn, inputKey) {
+      const press = (e) => {
+        e.preventDefault();
+        touchInput[inputKey] = true;
+        btn.classList.add('active');
+      };
+      const release = (e) => {
+        e.preventDefault();
+        touchInput[inputKey] = false;
+        btn.classList.remove('active');
+      };
+
+      btn.addEventListener('touchstart', press, { passive: false });
+      btn.addEventListener('touchend', release, { passive: false });
+      btn.addEventListener('touchcancel', release, { passive: false });
+      btn.addEventListener('mousedown', press);
+      btn.addEventListener('mouseup', release);
+      btn.addEventListener('mouseleave', release);
+    }
+
+    function setupTouchDrag() {
+      let activeTouchId = null;
+
+      canvas.addEventListener('touchstart', (e) => {
+        if (state !== 'playing' || activeTouchId !== null) return;
+        e.preventDefault();
+        const touch = e.changedTouches[0];
+        activeTouchId = touch.identifier;
+        movePlayerToTouch(touch.clientX);
+      }, { passive: false });
+
+      canvas.addEventListener('touchmove', (e) => {
+        if (activeTouchId === null) return;
+        e.preventDefault();
+        for (const touch of e.changedTouches) {
+          if (touch.identifier === activeTouchId) {
+            movePlayerToTouch(touch.clientX);
+            break;
+          }
+        }
+      }, { passive: false });
+
+      const endTouch = (e) => {
+        for (const touch of e.changedTouches) {
+          if (touch.identifier === activeTouchId) {
+            activeTouchId = null;
+            break;
+          }
+        }
+      };
+
+      canvas.addEventListener('touchend', endTouch, { passive: false });
+      canvas.addEventListener('touchcancel', endTouch, { passive: false });
+    }
+
+    function movePlayerToTouch(clientX) {
+      const rect = canvas.getBoundingClientRect();
+      const ratio = CANVAS_W / rect.width;
+      const canvasX = (clientX - rect.left) * ratio;
+      player.x = Math.max(0, Math.min(CANVAS_W - player.width, canvasX - player.width / 2));
+    }
+
     function init() {
       createStars();
       resetGame();
+
+      if (isTouchDevice) {
+        touchControlsEl.classList.add('visible');
+        instructionsEl.textContent = 'Use on-screen buttons or drag ship on screen | FIRE to shoot';
+        bindTouchButton(btnLeft, 'left');
+        bindTouchButton(btnRight, 'right');
+        bindTouchButton(btnShoot, 'shoot');
+        setupTouchDrag();
+      }
 
       document.addEventListener('keydown', (e) => {
         if (['ArrowLeft', 'ArrowRight', ' '].includes(e.key)) {
@@ -438,6 +617,10 @@
 
       restartBtn.addEventListener('click', () => {
         resetGame();
+      });
+
+      document.addEventListener('contextmenu', (e) => {
+        if (isTouchDevice) e.preventDefault();
       });
 
       if (animationId) cancelAnimationFrame(animationId);
