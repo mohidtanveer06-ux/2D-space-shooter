@@ -31,5 +31,5 @@ const server = http.createServer((req, res) => {
 });
 
 server.listen(PORT, () => {
-  console.log(`Space Shooter running at http://localhost:${PORT}`);
+  console.log(`MT 2D Space Shooter running at http://localhost:${PORT}`);
 });

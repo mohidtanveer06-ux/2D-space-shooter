@@ -1,6 +1,6 @@
-# 2D Space Shooter
+# MT 2D Space Shooter
 
-A browser-based 2D space shooter built with HTML5 Canvas. No external images required — all graphics are drawn with simple geometric shapes.
+A browser-based MT 2D space shooter built with HTML5 Canvas. No external images required — all graphics are drawn with simple geometric shapes.
 
 ## Play
 

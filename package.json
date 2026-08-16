@@ -1,7 +1,7 @@
 {
-  "name": "2d-space-shooter",
+  "name": "mt-2d-space-shooter",
   "version": "1.0.0",
-  "description": "A 2D space shooter game built with HTML Canvas",
+  "description": "MT 2D space shooter game built with HTML Canvas",
   "scripts": {
     "start": "node server.js"
   }
